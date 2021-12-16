@@ -32,25 +32,24 @@ function BulkFill.registerFunctions(vehicleType)
 	SpecializationUtil.registerFunction(vehicleType, "cycleFillTriggers", BulkFill["cycleFillTriggers"])
 end
 
+-- INCREASE RAYCAST DISTANCE FOR DISCHARGABLE OBJECTS
+function BulkFill.dischargeableLoadDischargeNode(self, superFunc, xmlFile, key, entry)
+	local retVal = superFunc(self, xmlFile, key, entry)
+	--entry.maxDistance = entry.maxDistance * 2
+	--print("loadDischargeNode: " .. tostring(entry.toolType))
+	--print("maxDistance: " .. tostring(entry.maxDistance))
+	return retVal
+end
+Dischargeable.loadDischargeNode = Utils.overwrittenFunction(Dischargeable.loadDischargeNode, BulkFill.dischargeableLoadDischargeNode)
+
 -- SAVE AND RETRIEVE TOGGLED STATE TO/FROM VEHICLES.XML
 function BulkFill.initSpecialization()
-	print("BulkFill - Init Specialization")
-	-- local schema = Vehicle.xmlSchema
-
-	-- schema:setXMLSpecializationType("Washable")
-	-- schema:register(XMLValueType.FLOAT, "vehicle.washable#dirtDuration", "Duration until fully dirty (minutes)", 90)
-	-- schema:register(XMLValueType.FLOAT, "vehicle.washable#washDuration", "Duration until fully clean (minutes)", 1)
-	-- schema:register(XMLValueType.FLOAT, "vehicle.washable#workMultiplier", "Multiplier while working", 4)
-	-- schema:register(XMLValueType.FLOAT, "vehicle.washable#fieldMultiplier", "Multiplier while on field", 2)
-	-- schema:register(XMLValueType.STRING, "vehicle.washable#blockedWashTypes", "Block specific ways to clean vehicle (HIGH_PRESSURE_WASHER, RAIN, TRIGGER)")
-	-- schema:setXMLSpecializationType()
-
+	print("  Register configuration 'bulkFill'")
 	local schemaSavegame = Vehicle.xmlSchemaSavegame
 	schemaSavegame:register(XMLValueType.BOOL, "vehicles.vehicle(?).bulkFill#isEnabled", "Bulk Fill is active", true)
 	schemaSavegame:register(XMLValueType.BOOL, "vehicles.vehicle(?).bulkFill#isSelectEnabled", "Manual select enabled", false)
 	
 end
-
 function BulkFill:onLoad(savegame)
 	print("Loading: " .. self:getFullName() .. " - " .. self.typeName)
 	self.spec_bulkFill.isFilling = false
@@ -81,11 +80,11 @@ function BulkFill:onLoad(savegame)
 
 	if self.spec_bulkFill.isValid then
 		if savegame ~= nil and savegame.xmlFile ~= nil and savegame.xmlFile:hasProperty(savegame.key..".bulkFill") then
-			print("LOAD BULK FILL SETTINGS")
+			--print("LOAD BULK FILL SETTINGS")
 			self.spec_bulkFill.isEnabled = savegame.xmlFile:getValue(savegame.key..".bulkFill#isEnabled", true)
 			self.spec_bulkFill.isSelectEnabled = savegame.xmlFile:getValue(savegame.key..".bulkFill#isSelectEnabled", false)
 		else
-			print("DEFAULT BULK FILL SETTINGS")
+			--print("DEFAULT BULK FILL SETTINGS")
 			self.spec_bulkFill.isEnabled = true
 			self.spec_bulkFill.isSelectEnabled = false
 		end
@@ -119,11 +118,9 @@ end
 -- TOGGLE ENABLE/DISABLE BULK FILL
 function BulkFill:onRegisterActionEvents(isActiveForInput, isActiveForInputIgnoreSelection)
 	if self.isClient then
-	
-		print("*** " .. self:getFullName() .. " ***")
-			
+		--print("*** " .. self:getFullName() .. " ***")	
 		local spec = self.spec_bulkFill
-		--self:clearActionEventsTable(spec.actionEvents)
+		self:clearActionEventsTable(spec.actionEvents)
 
 		if isActiveForInputIgnoreSelection and self.spec_bulkFill.isValid then
 
@@ -180,7 +177,7 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 		
 		-- I cannot find where this happens: when a container stops filling due to becoming full
 		if self.spec_bulkFill.isFilling ~= self.spec_fillUnit.fillTrigger.isFilling then
-			print("'isFilling' was changed without us knowing..")
+			--print("'isFilling' was changed without us knowing..")
 			self.spec_bulkFill.isFilling = self.spec_fillUnit.fillTrigger.isFilling
 			bf.lastNumberTriggers = 0 -- change this to trigger 'MULTIPLE FILL TYPES AVAILABLE'
 		end
@@ -207,7 +204,7 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 				bf.lastSelectedIndex ~= bf.selectedIndex or
 				bf.lastNumberTriggers ~=# spec.fillTrigger.triggers)
 			then
-				-- print("VEHICLE HAS COVERS WITH MULTIPLE FILL TYPES AVAILABLE")
+				print("VEHICLE HAS COVERS WITH MULTIPLE FILL TYPES AVAILABLE")
 				bf.lastCoverOpen = self.spec_cover.state
 				bf.lastSelectedIndex = bf.selectedIndex
 				bf.lastNumberTriggers = #spec.fillTrigger.triggers
@@ -263,21 +260,20 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 
 			if spec.fillTrigger.currentTrigger ~= nil then
 				if spec.fillTrigger.triggers[bf.selectedIndex]~=nil and spec.fillTrigger.triggers[bf.selectedIndex]~=spec.fillTrigger.currentTrigger then
-					-- print("CURRENT TRIGGER HAS CHANGED")
+					--print("CURRENT TRIGGER HAS CHANGED")
 					if spec.fillTrigger.currentTrigger.sourceObject ~= nil then
 						if spec.fillTrigger.currentTrigger.sourceObject.isDeleted then
-							-- print("DELETED: "..tostring(spec.fillTrigger.currentTrigger.sourceObject.id))
+							print("DELETED: "..tostring(spec.fillTrigger.currentTrigger.sourceObject.id))
 							
 							if bf.isEnabled then
 								local nextFillType = spec.fillTrigger.triggers[bf.selectedIndex].sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
 								local previousFillType = spec.fillTrigger.currentTrigger.sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
 								if nextFillType == previousFillType then
-									-- print("FILL FROM NEXT: "..tostring(spec.fillTrigger.triggers[bf.selectedIndex].sourceObject.id))
+									print("FILL FROM NEXT: "..tostring(spec.fillTrigger.triggers[bf.selectedIndex].sourceObject.id))
 									if #spec.fillUnits==1 then
 										local sourceObject = spec.fillTrigger.triggers[bf.selectedIndex].sourceObject
 										bf.canFillFrom[sourceObject.id] = nil
 									end
-									--spec.fillTrigger.activatable:onActivateObject()
 									spec.fillTrigger.activatable:run()
 								else
 									if #spec.fillTrigger.triggers > 0 then
@@ -366,12 +362,12 @@ function BulkFill:actionEventHandler(actionName, inputValue, callbackState, isAn
 end
 function BulkFill:toggleBulkFill()
 	if not self.spec_bulkFill.isEnabled then
-		print("ENABLE BULK FILL")
+		--print("ENABLE BULK FILL")
 		self.spec_bulkFill.isEnabled = true
 		g_inputBinding:setActionEventText(self.spec_bulkFill.toggleActionEventId, g_i18n:getText("action_BULK_FILL_ENABLED"))
 		self.spec_bulkFill.isFilling = self.spec_fillUnit.fillTrigger.isFilling
 	else
-		print("DISABLE BULK FILL")
+		--print("DISABLE BULK FILL")
 		self.spec_bulkFill.isEnabled = false
 		self.spec_bulkFill.isFilling = false
 		g_inputBinding:setActionEventText(self.spec_bulkFill.toggleActionEventId, g_i18n:getText("action_BULK_FILL_DISABLED"))
@@ -379,11 +375,11 @@ function BulkFill:toggleBulkFill()
 end
 function BulkFill:toggleFillSelection()
 	if not self.spec_bulkFill.isSelectEnabled then
-		print("ENABLE FILL SELECTION")
+		--print("ENABLE FILL SELECTION")
 		self.spec_bulkFill.isSelectEnabled = true
 		g_inputBinding:setActionEventText(self.spec_bulkFill.showActionEventId, g_i18n:getText("action_FILL_SELECT_ENABLED"))
 	else
-		print("DISABLE FILL SELECTION")
+		--print("DISABLE FILL SELECTION")
 		self.spec_bulkFill.isSelectEnabled = false
 		g_inputBinding:setActionEventText(self.spec_bulkFill.showActionEventId, g_i18n:getText("action_FILL_SELECT_DISABLED"))
 	end
@@ -393,10 +389,10 @@ function BulkFill:cycleFillTriggers(direction)
 	local spec = self.spec_fillUnit
 	
 	if direction == 'FW' then
-		print("CYCLE_FORWARDS")
+		--print("CYCLE_FORWARDS")
 		bf.selectedIndex = bf.selectedIndex + 1
 	else
-		print("CYCLE_BACKWARDS")
+		--print("CYCLE_BACKWARDS")
 		bf.selectedIndex = bf.selectedIndex - 1
 	end
 	
@@ -420,8 +416,8 @@ function BulkFill.FillActivatableRun(self, superFunc)
 				print("INCORRECT FILL TYPE")
 				return superFunc(self)
 			else
-				-- print("startFilling("..tostring(sourceObject.id)..")")
-				self.vehicle:startFilling(sourceObject.id)
+				--print("startFilling("..tostring(sourceObject.id).."/"..tostring(sourceObject.lastServerId)..")"..")")
+				self.vehicle:startFilling(sourceObject)
 			end
 		end
 	end
@@ -430,14 +426,15 @@ function BulkFill.FillActivatableRun(self, superFunc)
 	
 	if bf~=nil and bf.isValid then
 		if spec.fillTrigger.isFilling then
-			-- print("STARTED FILLING " .. tostring(spec.fillTrigger.currentTrigger.sourceObject.id))
+			--print("STARTED FILLING " .. tostring(spec.fillTrigger.currentTrigger.sourceObject.id))
 			bf.isFilling = true
 		else
-			-- print("CANCELED FILLING")
+			--print("CANCELED FILLING")
 			bf.isFilling = false
 		end
 	end
 end
+FillActivatable.run = Utils.overwrittenFunction(FillActivatable.run, BulkFill.FillActivatableRun)
 
 -- NETWORK EVENTS:
 function BulkFill:openCover(myState, noEventSend)
@@ -448,10 +445,10 @@ function BulkFill:openCover(myState, noEventSend)
 	if noEventSend == nil or noEventSend == false then
 		if g_server ~= nil then
 			print("g_server:broadcastEvent: openCover")
-			g_server:broadcastEvent(OpenCoverEvent:new(self, myState), nil, nil, self)
+			g_server:broadcastEvent(OpenCoverEvent.new(self, myState), nil, nil, self)
 		else
 			print("g_client:sendEvent: openCover")
-			g_client:getServerConnection():sendEvent(OpenCoverEvent:new(self, myState))
+			g_client:getServerConnection():sendEvent(OpenCoverEvent.new(self, myState))
 		end
 	end
 end
@@ -464,15 +461,15 @@ function BulkFill:stopFilling(noEventSend)
 	if noEventSend == nil or noEventSend == false then
 		if g_server ~= nil then
 			print("g_server:broadcastEvent: stopFilling")
-			g_server:broadcastEvent(StopFillingEvent:new(self), nil, nil, self)
+			g_server:broadcastEvent(StopFillingEvent.new(self), nil, nil, self)
 		else
 			print("g_client:sendEvent: stopFilling")
-			g_client:getServerConnection():sendEvent(StopFillingEvent:new(self))
+			g_client:getServerConnection():sendEvent(StopFillingEvent.new(self))
 		end
 	end
 end
 
-function BulkFill:startFilling(myID, noEventSend)
+function BulkFill:startFilling(pallet, noEventSend)
 	local spec = self.spec_fillUnit
 	local objectFound = false
 	
@@ -483,10 +480,13 @@ function BulkFill:startFilling(myID, noEventSend)
 	
 	for i = 1, #spec.fillTrigger.triggers do
 		if spec.fillTrigger.triggers[i].sourceObject ~= nil then
-			if spec.fillTrigger.triggers[i].sourceObject.id == myID then
+		
+			local sourceObject = spec.fillTrigger.triggers[i].sourceObject
+			if sourceObject.id == pallet.id then
 				objectFound = true
-				print("index:" .. tostring(i) .. "  id:" .. tostring(spec.fillTrigger.triggers[i].sourceObject.id))
+				print("index:" .. tostring(i) .. "  id:" .. tostring(sourceObject.id).. "/" .. tostring(sourceObject.lastServerId))
 				if i~=1 then
+					print("REORDERING TRIGGERS: "..tostring(i))
 					table.insert(spec.fillTrigger.triggers, 1, spec.fillTrigger.triggers[i])
 					table.remove(spec.fillTrigger.triggers, i+1)
 					spec.fillTrigger.currentTrigger = spec.fillTrigger.triggers[1]
@@ -498,19 +498,19 @@ function BulkFill:startFilling(myID, noEventSend)
 	
 	if not objectFound then
 
-		print("Couldn't find object with id: " .. tostring(myID))
+		print("Couldn't find pallet with id: " .. tostring(pallet.id) .. "/" .. tostring(pallet.lastServerId))
 		return
 		
 		-- print("FULL SERVER TABLE:")
 		-- DebugUtil.printTableRecursively(g_server, " ", 0, 1);
 		
 		-- if g_server ~= nil then
-			-- if g_server.objects[myID] ~= nil then
-				-- print("g_server - inserting new object")
+			-- if g_server.objects[pallet.id] ~= nil then
+				-- print("g_server - inserting new pallet")
 				-- table.insert(spec.fillTrigger.triggers, 1, spec.fillTrigger.triggers[1])
-				-- spec.fillTrigger.triggers[1].sourceObject = g_server.objects[myID]
+				-- spec.fillTrigger.triggers[1].sourceObject = g_server.objects[pallet.id]
 			-- else
-				-- print("Couldn't find object with id: " .. tostring(myID))
+				-- print("Couldn't find pallet with id: " .. tostring(pallet.id))
 				-- print("...spec_bulkFill.isFilling: " .. tostring(self.spec_bulkFill.isFilling))
 				-- print("...spec.fillTrigger.isFilling: " .. tostring(spec.fillTrigger.isFilling))
 				-- return
@@ -521,14 +521,14 @@ function BulkFill:startFilling(myID, noEventSend)
 	
 	if noEventSend == nil or noEventSend == false then
 		-- ONLY SEND REQUEST ONCE PER OBJECT ID
-		if self.spec_bulkFill.lastRequestedIndex ~= myID then
-			self.spec_bulkFill.lastRequestedIndex = myID
+		if self.spec_bulkFill.lastRequestedIndex ~= pallet.id then
+			self.spec_bulkFill.lastRequestedIndex = pallet.id
 			if g_server ~= nil then
 				print("g_server:broadcastEvent: startFilling")
-				g_server:broadcastEvent(StartFillingEvent:new(self, myID), nil, nil, self)
+				g_server:broadcastEvent(StartFillingEvent.new(self, pallet), nil, nil, self)
 			else
 				print("g_client:sendEvent: startFilling")
-				g_client:getServerConnection():sendEvent(StartFillingEvent:new(self, myID))
+				g_client:getServerConnection():sendEvent(StartFillingEvent.new(self, pallet))
 			end
 		end
 	end
@@ -547,13 +547,11 @@ function BulkFill:FillUnitActionEventUnload(actionName, inputValue, callbackStat
 		end
 	end
 end
+FillUnit.actionEventUnload = Utils.prependedFunction(FillUnit.actionEventUnload, BulkFill.FillUnitActionEventUnload)
 
 -- BULK FILL FUNCTIONS
 function BulkFill:loadMap(name)
-	print("Load Mod: 'BULK FILL' - FS22 test version 0001")
-	FillActivatable.run = Utils.overwrittenFunction(FillActivatable.run, BulkFill.FillActivatableRun)
-	FillUnit.actionEventUnload = Utils.prependedFunction(FillUnit.actionEventUnload, BulkFill.FillUnitActionEventUnload)
-
+	print("Load Mod: 'BULK FILL' - FS22 test version 0002")
 	BulkFill.initialised = false
 end
 

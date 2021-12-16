@@ -11,28 +11,30 @@ function OpenCoverEvent.new(myObject, myState)
 	local self = OpenCoverEvent.emptyNew()
 	self.object = myObject
 	self.state = myState
-
 	return self
 end
 
 function OpenCoverEvent:readStream(streamId, connection)
-	self.object = NetworkUtil.readNodeObject(streamId)
-	self.state = streamReadInt32(streamId)
-	
+	if not connection:getIsServer() then
+		self.object = NetworkUtil.readNodeObject(streamId)
+		self.state = streamReadInt32(streamId)
+	end
 	self:run(connection)
 end
 
 function OpenCoverEvent:writeStream(streamId, connection)
-	NetworkUtil.writeNodeObject(streamId, self.object)
-	streamWriteInt32(streamId, self.state)
+	if connection:getIsServer() then
+		NetworkUtil.writeNodeObject(streamId, self.object)
+		streamWriteInt32(streamId, self.state)
+	end
 end
 
 function OpenCoverEvent:run(connection)
 	if not connection:getIsServer() then
-		--print("OpenCoverEvent: server")
+		print("OpenCoverEvent: server")
 		self.object:openCover(self.state, true)
 	else
-		--print("OpenCoverEvent: client")
-		self.object:openCover(self.state, true)
+		print("OpenCoverEvent: client")
+		--self.object:openCover(self.state, true)
 	end
 end

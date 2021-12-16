@@ -14,23 +14,26 @@ function StopFillingEvent.new(object)
 end
 
 function StopFillingEvent:readStream(streamId, connection)
-	self.object = NetworkUtil.readNodeObject(streamId)
-	self.object.spec_bulkFill.isFilling = false
-	self.object.spec_fillUnit.fillTrigger.currentTrigger = nil
-	
+	if not connection:getIsServer() then
+		self.object = NetworkUtil.readNodeObject(streamId)
+		self.object.spec_bulkFill.isFilling = false
+		self.object.spec_fillUnit.fillTrigger.currentTrigger = nil
+	end
 	self:run(connection)
 end
 
 function StopFillingEvent:writeStream(streamId, connection)
-	NetworkUtil.writeNodeObject(streamId, self.object)
+	if connection:getIsServer() then
+		NetworkUtil.writeNodeObject(streamId, self.object)
+	end
 end
 
 function StopFillingEvent:run(connection)
 	if not connection:getIsServer() then
-		--print("StopFillingEvent: server")
+		print("StopFillingEvent: server")
 		self.object:stopFilling(true)
 	else
-		--print("StopFillingEvent: client")
-		self.object:stopFilling(true)
+		print("StopFillingEvent: client")
+		--self.object:stopFilling(true)
 	end
 end
