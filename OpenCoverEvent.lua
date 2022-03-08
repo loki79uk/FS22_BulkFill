@@ -31,10 +31,10 @@ end
 
 function OpenCoverEvent:run(connection)
 	if not connection:getIsServer() then
-		print("OpenCoverEvent: server")
+		--print("OpenCoverEvent: server")
 		self.object:openCover(self.state, true)
 	else
-		print("OpenCoverEvent: client")
+		--print("OpenCoverEvent: client")
 		--self.object:openCover(self.state, true)
 	end
 end

@@ -43,12 +43,12 @@ end
 
 function StartFillingEvent:run(connection)
 	if not connection:getIsServer() then
-		print("StartFillingEvent: server")
+		--print("StartFillingEvent: server")
 		if self.object~=nil and self.pallet ~=nil then
 			self.object:startFilling(self.pallet, true)
 		end
 	else
-		print("StartFillingEvent: client")
+		--print("StartFillingEvent: client")
 		--self.object:startFilling(pallet, true)
 	end
 end

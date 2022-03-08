@@ -30,10 +30,10 @@ end
 
 function StopFillingEvent:run(connection)
 	if not connection:getIsServer() then
-		print("StopFillingEvent: server")
+		--print("StopFillingEvent: server")
 		self.object:stopFilling(true)
 	else
-		print("StopFillingEvent: client")
+		--print("StopFillingEvent: client")
 		--self.object:stopFilling(true)
 	end
 end
