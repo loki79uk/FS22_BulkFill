@@ -54,6 +54,8 @@ function BulkFill:onLoad(savegame)
 	self.spec_bulkFill.isFilling = false
 	self.spec_bulkFill.selectedIndex = 1
 	self.spec_bulkFill.lastRequestedIndex = 0
+	self.spec_bulkFill.orderedTriggers = {}
+	self.spec_bulkFill.unorderedTriggers = {}
 	self.spec_bulkFill.canFillFrom = {}
 	self.spec_bulkFill.hasFillCovers = false
 	self.spec_bulkFill.isEnabled = false
@@ -169,127 +171,173 @@ function BulkFill:onRegisterActionEvents(isActiveForInput, isActiveForInputIgnor
 	end	
 	
 end
+--
+function sortTriggersBySourceObjectId(w1,w2)
+
+	if w1.sourceObject:getFillUnitFillLevel(1) < w2.sourceObject:getFillUnitFillLevel(1) then
+		return true
+	elseif w1.sourceObject.id > w2.sourceObject.id then
+		return true
+	end
+end
+--
 function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection, isSelected)
-	if isActiveForInputIgnoreSelection and self.spec_bulkFill.isValid then
-		local bf = self.spec_bulkFill
-		local spec = self.spec_fillUnit
-		
-		-- I cannot find where this happens: when a container stops filling due to becoming full
-		if self.spec_bulkFill.isFilling ~= self.spec_fillUnit.fillTrigger.isFilling then
-			--print("'isFilling' was changed without us knowing..")
-			self.spec_bulkFill.isFilling = self.spec_fillUnit.fillTrigger.isFilling
-			bf.lastNumberTriggers = 0
-		end
-		
-		if #spec.fillTrigger.triggers == 0 then
-			-- print("NO TRIGGERS AVAILABLE")
-			bf.selectedIndex = 1
-			g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, false)
-			g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, false)
-			g_inputBinding:setActionEventActive(bf.cycleFwActionEventId, false)
-			g_inputBinding:setActionEventActive(bf.cycleBwActionEventId, false)
+
+	if self.isClient and g_dedicatedServer==nil then 
+	
+		if isActiveForInputIgnoreSelection and self.spec_bulkFill.isValid then
+			local bf = self.spec_bulkFill
+			local spec = self.spec_fillUnit
 			
-			if spec.fillTrigger.currentTrigger ~= nil then
-				--print("STOP FILLING - NO TRIGGER")
-				self:stopFilling()
+			-- I cannot find where this happens: when a container stops filling due to becoming full
+			if self.spec_bulkFill.isFilling ~= self.spec_fillUnit.fillTrigger.isFilling then
+				--print("'isFilling' was changed without us knowing..")
+				self.spec_bulkFill.isFilling = self.spec_fillUnit.fillTrigger.isFilling
+				bf.lastNumberTriggers = 0
 			end
 			
-		else
-			-- print("TRIGGERS AVAILABLE")
-			bf.selectedIndex = MathUtil.clamp(bf.selectedIndex, 1, #spec.fillTrigger.triggers)
-
-			if bf.isSelectEnabled and bf.hasFillCovers and
-			   (bf.lastCoverOpen ~= self.spec_cover.state or
-				bf.lastSelectedIndex ~= bf.selectedIndex or
-				bf.lastNumberTriggers ~= #spec.fillTrigger.triggers)
-			then
-				-- print("VEHICLE HAS COVERS")
-				bf.lastCoverOpen = self.spec_cover.state
-				bf.lastSelectedIndex = bf.selectedIndex
-				bf.lastNumberTriggers = #spec.fillTrigger.triggers
+			if #spec.fillTrigger.triggers == 0 then
+				-- print("NO TRIGGERS AVAILABLE")
+				bf.selectedIndex = 1
+				bf.orderedTriggers = {}
+				bf.unorderedTriggers = {}
+				g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, false)
+				g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, false)
+				g_inputBinding:setActionEventActive(bf.cycleFwActionEventId, false)
+				g_inputBinding:setActionEventActive(bf.cycleBwActionEventId, false)
 				
-				local openCoverFillTypes = {}
-				if self.spec_cover.state ~= 0 then
-					for i, openCoverFillIndex in ipairs(self.spec_cover.covers[self.spec_cover.state].fillUnitIndices) do
-						if spec.fillUnits[openCoverFillIndex].fillLevel < spec.fillUnits[openCoverFillIndex].capacity then
-							for supportedFillType, _ in pairs(spec.fillUnits[openCoverFillIndex].supportedFillTypes) do
-								-- print("supportedFillType: " .. supportedFillType)
-								openCoverFillTypes[supportedFillType] = true
+				if spec.fillTrigger.currentTrigger ~= nil then
+					--print("STOP FILLING - NO TRIGGER")
+					self:stopFilling()
+				end
+				
+			else
+				-- print("TRIGGERS AVAILABLE")
+				if bf.lastNumberTriggers ~= #spec.fillTrigger.triggers then
+					local resortTriggers = #bf.orderedTriggers == 0
+					for _, trigger in ipairs(spec.fillTrigger.triggers) do
+						if bf.unorderedTriggers[trigger] == nil then
+							table.insert(bf.orderedTriggers, trigger)
+							bf.unorderedTriggers[trigger] = true
+						end
+					end
+					
+					for index, orderedTrigger in ipairs(bf.orderedTriggers) do
+						local triggerFound = false
+						for _, trigger in ipairs(spec.fillTrigger.triggers) do
+							if orderedTrigger == trigger then
+								triggerFound = true
 							end
 						end
-					end	
-				end
-
-				for index, trigger in ipairs(spec.fillTrigger.triggers) do
-					if trigger.sourceObject ~= nil then
-						local sourceObject = trigger.sourceObject
-						local objectFillType = sourceObject.spec_fillUnit.fillUnits[1].fillType
-						bf.canFillFrom[sourceObject.id] = openCoverFillTypes[objectFillType]
+						if not triggerFound then
+							table.remove(bf.orderedTriggers, index)
+							bf.unorderedTriggers[orderedTrigger] = nil
+						end
+					end
+					
+					if resortTriggers then
+						table.sort(bf.orderedTriggers, sortTriggersBySourceObjectId)
+					end
+					
+					if bf.selectedIndex > #bf.orderedTriggers then
+						-- print("CHANGING SELECTED INDEX BACK TO 1")
+						bf.selectedIndex = 1
 					end
 				end
-			end
 
-			if spec.fillTrigger.currentTrigger ~= nil then
-				if spec.fillTrigger.triggers[bf.selectedIndex]~=nil and spec.fillTrigger.triggers[bf.selectedIndex]~=spec.fillTrigger.currentTrigger then
-					--print("CURRENT TRIGGER HAS CHANGED")
-					if spec.fillTrigger.currentTrigger.sourceObject ~= nil then
-						if spec.fillTrigger.currentTrigger.sourceObject.isDeleted then
-							--print("DELETED: "..tostring(spec.fillTrigger.currentTrigger.sourceObject.id))
-							
-							if bf.isEnabled then
-								local nextFillType = spec.fillTrigger.triggers[bf.selectedIndex].sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
-								local previousFillType = spec.fillTrigger.currentTrigger.sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
-								if nextFillType == previousFillType then
-									--print("FILL FROM NEXT: "..tostring(spec.fillTrigger.triggers[bf.selectedIndex].sourceObject.id))
-									if #spec.fillUnits==1 then
-										local sourceObject = spec.fillTrigger.triggers[bf.selectedIndex].sourceObject
-										bf.canFillFrom[sourceObject.id] = true
-									end
-									spec.fillTrigger.activatable:run()
-								else
-									if #spec.fillTrigger.triggers > 0 then
-										--print("FILL TYPES ARE DIFFERENT")
-										if #spec.fillUnits==1 then
-											local sourceObject = spec.fillTrigger.triggers[bf.selectedIndex].sourceObject
-											bf.canFillFrom[sourceObject.id] = false
-										end
-										self:cycleFillTriggers('FW')
-										if bf.selectedIndex == 1 then
-											self:stopFilling()
-										end
-									end
+				if bf.isSelectEnabled and bf.hasFillCovers and
+				   (bf.lastCoverOpen ~= self.spec_cover.state or
+					bf.lastSelectedIndex ~= bf.selectedIndex or
+					bf.lastNumberTriggers ~= #spec.fillTrigger.triggers)
+				then
+					-- print("VEHICLE HAS COVERS")
+					bf.lastCoverOpen = self.spec_cover.state
+					bf.lastSelectedIndex = bf.selectedIndex
+					bf.lastNumberTriggers = #spec.fillTrigger.triggers
+					
+					local openCoverFillTypes = {}
+					if self.spec_cover.state ~= 0 then
+						for _, openCoverFillIndex in ipairs(self.spec_cover.covers[self.spec_cover.state].fillUnitIndices) do
+							if spec.fillUnits[openCoverFillIndex].fillLevel < spec.fillUnits[openCoverFillIndex].capacity then
+								for supportedFillType, _ in pairs(spec.fillUnits[openCoverFillIndex].supportedFillTypes) do
+									-- print("supportedFillType: " .. supportedFillType)
+									openCoverFillTypes[supportedFillType] = true
 								end
-							else
-								--print("STOP FILLING - BULK FILL DISABLED")
-								self:stopFilling()
+							end
+						end	
+					end
+
+					for index, trigger in ipairs(bf.orderedTriggers) do
+						if trigger.sourceObject ~= nil then
+							local sourceObject = trigger.sourceObject
+							local objectFillType = sourceObject.spec_fillUnit.fillUnits[1].fillType
+							bf.canFillFrom[sourceObject.id] = openCoverFillTypes[objectFillType]
+						end
+					end
+				end
+
+				if spec.fillTrigger.currentTrigger ~= nil then
+					if bf.orderedTriggers[bf.selectedIndex]~=nil and bf.orderedTriggers[bf.selectedIndex]~=spec.fillTrigger.currentTrigger then
+						-- print("CURRENT TRIGGER HAS CHANGED")
+						if spec.fillTrigger.currentTrigger.sourceObject ~= nil then
+							if spec.fillTrigger.currentTrigger.sourceObject.isDeleted then
+								-- print("DELETED: "..tostring(spec.fillTrigger.currentTrigger.sourceObject.id))
+
+								if bf.isEnabled then
+									local nextFillType = bf.orderedTriggers[bf.selectedIndex].sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
+									local previousFillType = spec.fillTrigger.currentTrigger.sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
+									if nextFillType == previousFillType then
+										-- print("FILL FROM NEXT: "..tostring(bf.orderedTriggers[bf.selectedIndex].sourceObject.id))
+										if #spec.fillUnits==1 then
+											local sourceObject = bf.orderedTriggers[bf.selectedIndex].sourceObject
+											bf.canFillFrom[sourceObject.id] = true
+										end
+										spec.fillTrigger.activatable:run()
+									else
+										if #bf.orderedTriggers > 0 then
+											-- print("FILL TYPES ARE DIFFERENT")
+											if #spec.fillUnits==1 then
+												local sourceObject = bf.orderedTriggers[bf.selectedIndex].sourceObject
+												bf.canFillFrom[sourceObject.id] = nil
+											end
+											self:cycleFillTriggers('FW')
+											if bf.selectedIndex == 1 then
+												self:stopFilling()
+											end
+										end
+									end
+								else
+									-- print("STOP FILLING - BULK FILL DISABLED")
+									self:stopFilling()
+								end
 							end
 						end
 					end
 				end
-			end
 
-			if bf.isSelectEnabled and not g_gui:getIsGuiVisible() then
-				if bf.isFilling then
-					g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, false)
-					g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, false)
-					g_inputBinding:setActionEventActive(bf.cycleFwActionEventId, false)
-					g_inputBinding:setActionEventActive(bf.cycleBwActionEventId, false)
-				else
-					g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, true)
-					g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, true)
-					g_inputBinding:setActionEventActive(bf.cycleFwActionEventId, true)
-					g_inputBinding:setActionEventActive(bf.cycleBwActionEventId, true)
-				end
-
-				for i = 1, #spec.fillTrigger.triggers do
-					if spec.fillTrigger.triggers[i] ~= nil then
-						local trigger = spec.fillTrigger.triggers[i]
+				if bf.isSelectEnabled and not g_gui:getIsGuiVisible() then
+					if bf.isFilling then
+						g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, false)
+						g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, false)
+						g_inputBinding:setActionEventActive(bf.cycleFwActionEventId, false)
+						g_inputBinding:setActionEventActive(bf.cycleBwActionEventId, false)
+					else
+						g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, true)
+						g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, true)
+						g_inputBinding:setActionEventActive(bf.cycleFwActionEventId, true)
+						g_inputBinding:setActionEventActive(bf.cycleBwActionEventId, true)
+					end
+				
+					for index, trigger in ipairs(bf.orderedTriggers) do
 						if trigger.sourceObject ~= nil then
 							local sourceObject = trigger.sourceObject
 							local node = BulkFill.getObjectNode(sourceObject)
 							if node ~= nil then
 								local colour = {}
-								if i==bf.selectedIndex then
+								if index==bf.selectedIndex then
+								
+									local useCBM = g_gameSettings:getValue(GameSettings.SETTING.USE_COLORBLIND_MODE) or false
+									
 									if bf.canFillFrom[sourceObject.id] == nil then
 										colour = {1.0,1.0,0.1,1.0} -- YELLOW
 									else
@@ -309,12 +357,12 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 							end
 						end
 					end
+				else
+					g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, false)
+					g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, false)
+					g_inputBinding:setActionEventActive(bf.cycleFwActionEventId, false)
+					g_inputBinding:setActionEventActive(bf.cycleBwActionEventId, false)
 				end
-			else
-				g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, false)
-				g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, false)
-				g_inputBinding:setActionEventActive(bf.cycleFwActionEventId, false)
-				g_inputBinding:setActionEventActive(bf.cycleBwActionEventId, false)
 			end
 		end
 	end
@@ -380,9 +428,9 @@ function BulkFill:cycleFillTriggers(direction)
 	end
 	
 	if bf.selectedIndex < 1 then
-		bf.selectedIndex = #spec.fillTrigger.triggers
+		bf.selectedIndex = #bf.orderedTriggers
 	end
-	if bf.selectedIndex > #spec.fillTrigger.triggers then
+	if bf.selectedIndex > #bf.orderedTriggers then
 		bf.selectedIndex = 1
 	end
 end
@@ -393,7 +441,8 @@ function BulkFill.FillActivatableRun(self, superFunc)
 	local spec = self.vehicle.spec_fillUnit
 	
 	if bf~=nil and bf.isValid then
-		local sourceObject = spec.fillTrigger.triggers[bf.selectedIndex].sourceObject
+
+		local sourceObject = bf.orderedTriggers[bf.selectedIndex].sourceObject
 		if sourceObject ~= nil then
 			if bf.canFillFrom[sourceObject.id] == false then
 				--print("INCORRECT FILL TYPE")
@@ -456,22 +505,21 @@ function BulkFill:startFilling(pallet, noEventSend)
 	local spec = self.spec_fillUnit
 	local objectFound = false
 	
-	if self.spec_bulkFill.selectedIndex ~= 1 then
-		--print("CHANGING SELECTED INDEX BACK TO 1")
-		self.spec_bulkFill.selectedIndex = 1
-	end
+	-- if self.spec_bulkFill.selectedIndex ~= 1 then
+		-- --print("CHANGING SELECTED INDEX BACK TO 1")
+		-- self.spec_bulkFill.selectedIndex = 1
+	-- end
 	
-	for i = 1, #spec.fillTrigger.triggers do
-		if spec.fillTrigger.triggers[i].sourceObject ~= nil then
-		
-			local sourceObject = spec.fillTrigger.triggers[i].sourceObject
+	for index, trigger in ipairs(spec.fillTrigger.triggers) do
+		if trigger.sourceObject ~= nil then
+			local sourceObject = trigger.sourceObject
 			if sourceObject.id == pallet.id then
 				objectFound = true
-				--print("index:" .. tostring(i) .. "  id:" .. tostring(sourceObject.id).. "/" .. tostring(sourceObject.lastServerId))
-				if i~=1 then
-					--print("REORDERING TRIGGERS: "..tostring(i))
-					table.insert(spec.fillTrigger.triggers, 1, spec.fillTrigger.triggers[i])
-					table.remove(spec.fillTrigger.triggers, i+1)
+				--print("index:" .. tostring(index) .. "  id:" .. tostring(sourceObject.id).. "/" .. tostring(sourceObject.lastServerId))
+				if index~=1 then
+					--print("REORDERING TRIGGERS: "..tostring(index))
+					table.insert(spec.fillTrigger.triggers, 1, trigger)
+					table.remove(spec.fillTrigger.triggers, index+1)
 					spec.fillTrigger.currentTrigger = spec.fillTrigger.triggers[1]
 				end
 				break

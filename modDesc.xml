@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" standalone="no" ?>
-<modDesc descVersion="61">
+<modDesc descVersion="64">
 	<author>loki_79</author>
     <version>1.0.0.0</version>
 	<title>
@@ -17,7 +17,6 @@ Features:
 - Toggled state is stored independently for each tool when saving the game
 - The fill levels and order of the available fill sources are displayed
 - It is also possible to select the first item from which to begin filling
-- Covers will open automatically on tools such as seeders with fertiliser tanks
 ]]>
 </en>
 <de><![CDATA[Alle nachfüllbaren Werkzeuge (Sämaschinen, Spritzen oder Anhänger) können jetzt mit einem einzigen Füllbefehl von mehreren Paletten oder Big-Bags 'Schüttgutbefüllung', solange sich eine andere passende Fülleinheit in Reichweite befindet.
@@ -28,7 +27,6 @@ Merkmale:
 - Der umgeschaltete Zustand wird beim Speichern des Spiels unabhängig für jedes Werkzeug gespeichert
 - Die Füllstände und die Reihenfolge der verfügbaren Füllquellen werden angezeigt
 - Es ist auch möglich, das erste Element auszuwählen, mit dem das Füllen beginnen soll
-- Abdeckungen öffnen sich automatisch bei Geräten wie Sämaschinen mit Düngertank
 ]]>
 </de>
 <fr><![CDATA[Tous les outils rechargeables (semoirs, pulvérisateurs ou remorques) peuvent désormais être remplis en vrac à partir de plusieurs palettes ou big-bags en utilisant une seule commande de remplissage, à condition qu'il y ait une autre unité de remplissage correspondante dans la gamme.
@@ -39,7 +37,6 @@ Caractéristiques:
 - L'état de basculement est enregistré indépendamment pour chaque outil lors de la sauvegarde du jeu
 - Les niveaux de remplissage et l'ordre des sources de remplissage disponibles sont affichés
 - Il est également possible de sélectionner le premier élément à partir duquel il faut commencer à remplir
-- Les couvercles s'ouvriront automatiquement sur les outils tels que les semoirs avec réservoir d'engrais
 ]]>
 </fr>
 <ru><![CDATA[Любые перезаправляемые инструменты (сеялки, опрыскиватели или прицепы) теперь могут 'Массово заполнятся' с нескольких поддонов или биг-бегов, используя команду заполнения только один раз, если в диапазоне есть другая соответствующая заполняющая единица.
@@ -50,7 +47,6 @@ Caractéristiques:
 - Включенное состояние сохраняется независимо для каждого инструмента при сохранении игры
 - Отображаются уровни заполнения и порядок доступных источников заполнения
 - Также можно выбрать первый элемент, с которого начинать заполнение
-- Крышки автоматически открываются на таких инструментах, как сеялки с баками для удобрений
 ]]>
 </ru>
     </description>
