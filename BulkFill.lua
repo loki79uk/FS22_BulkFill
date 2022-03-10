@@ -8,6 +8,15 @@ source(g_currentModDirectory.."OpenCoverEvent.lua")
 source(g_currentModDirectory.."StopFillingEvent.lua")
 source(g_currentModDirectory.."StartFillingEvent.lua")
 
+BulkFill.ACTIVE      = { 0.1, 1.0, 0.1, 1.0 } --green
+BulkFill.INACTIVE    = { 1.0, 1.0, 0.1, 0.9 } --yellow
+BulkFill.UNSUPPORTED = { 1.0, 0.1, 0.1, 0.9 } --red
+BulkFill.UNSELECTED  = { 0.1, 0.1, 0.1, 0.3 } --grey
+
+BulkFill.ACTIVE_CB      = { 0.1, 0.5, 1.0, 1.0 }
+BulkFill.INACTIVE_CB    = { 1.0, 0.9, 0.0, 0.9 }
+BulkFill.UNSUPPORTED_CB = { 1.0, 0.5, 0.5, 0.9 }
+
 function BulkFill.prerequisitesPresent(specializations)
 	return  SpecializationUtil.hasSpecialization(FillUnit, specializations) and
 			SpecializationUtil.hasSpecialization(FillVolume, specializations) and
@@ -339,21 +348,23 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 									local useCBM = g_gameSettings:getValue(GameSettings.SETTING.USE_COLORBLIND_MODE) or false
 									
 									if bf.canFillFrom[sourceObject.id] == nil then
-										colour = {1.0,1.0,0.1,1.0} -- YELLOW
+										colour = useCBM and BulkFill.INACTIVE_CB or BulkFill.INACTIVE
 									else
 										if bf.canFillFrom[sourceObject.id] then
-											colour = {0.1,1.0,0.1,1.0} -- GREEN
+											colour = useCBM and BulkFill.ACTIVE_CB or BulkFill.ACTIVE
 										else
-											colour = {1.0,0.1,0.1,1.0} -- RED
+											colour = useCBM and BulkFill.UNSUPPORTED_CB or BulkFill.UNSUPPORTED
 										end
 									end
 								else
-									colour = {1.0,1.0,1.0,0.3}
+									colour = BulkFill.UNSELECTED
 								end
-								
+
 								local fillLevel = string.format("%.0f", sourceObject:getFillUnitFillLevel(1))
 								local x, y, z = getWorldTranslation(node)
-								Utils.renderTextAtWorldPosition(x, y+1, z, "#"..i.."\n[ "..fillLevel.." ]", getCorrectTextSize(0.02), 0, colour)
+								local textSize = getCorrectTextSize(0.016)
+								Utils.renderTextAtWorldPosition(x, y+1, z, "#"..index.."\n[ "..fillLevel.." ]", textSize, -textSize*0.5, colour)
+
 							end
 						end
 					end
