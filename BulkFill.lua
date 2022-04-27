@@ -1,9 +1,11 @@
 -- ============================================================= --
 -- BULK FILL MOD
 -- ============================================================= --
-BulkFill = {};
+BulkFill = {}
 
-addModEventListener(BulkFill);
+BulkFill.modName = g_currentModName
+BulkFill.specName = ("spec_%s.bulkFill"):format(g_currentModName)
+
 source(g_currentModDirectory.."OpenCoverEvent.lua")
 source(g_currentModDirectory.."StopFillingEvent.lua")
 source(g_currentModDirectory.."StartFillingEvent.lua")
@@ -60,6 +62,7 @@ function BulkFill.initSpecialization()
 end
 function BulkFill:onLoad(savegame)
 	--print("Loading: " .. self:getFullName() .. " - " .. self.typeName)
+	self.spec_bulkFill = self[BulkFill.specName]
 	self.spec_bulkFill.isFilling = false
 	self.spec_bulkFill.selectedIndex = 1
 	self.spec_bulkFill.lastRequestedIndex = 0
@@ -194,7 +197,7 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 
 	if self.isClient and g_dedicatedServer==nil then 
 	
-		if isActiveForInputIgnoreSelection and self.spec_bulkFill.isValid then
+		if isActiveForInputIgnoreSelection and self.spec_bulkFill.isValid or self.spec_bulkFill.isFilling then
 			local bf = self.spec_bulkFill
 			local spec = self.spec_fillUnit
 			
@@ -324,7 +327,7 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 					end
 				end
 
-				if bf.isSelectEnabled and not g_gui:getIsGuiVisible() then
+				if bf.isSelectEnabled and not g_gui:getIsGuiVisible() and isActiveForInputIgnoreSelection then
 					if bf.isFilling then
 						g_inputBinding:setActionEventTextVisibility(bf.cycleFwActionEventId, false)
 						g_inputBinding:setActionEventTextVisibility(bf.cycleBwActionEventId, false)
@@ -526,9 +529,9 @@ function BulkFill:startFilling(pallet, noEventSend)
 			local sourceObject = trigger.sourceObject
 			if sourceObject.id == pallet.id then
 				objectFound = true
-				--print("index:" .. tostring(index) .. "  id:" .. tostring(sourceObject.id).. "/" .. tostring(sourceObject.lastServerId))
+				print("index:" .. tostring(index) .. "  id:" .. tostring(sourceObject.id).. "/" .. tostring(sourceObject.lastServerId))
 				if index~=1 then
-					--print("REORDERING TRIGGERS: "..tostring(index))
+					print("REORDERING TRIGGERS: "..tostring(index))
 					table.insert(spec.fillTrigger.triggers, 1, trigger)
 					table.remove(spec.fillTrigger.triggers, index+1)
 					spec.fillTrigger.currentTrigger = spec.fillTrigger.triggers[1]
@@ -540,11 +543,11 @@ function BulkFill:startFilling(pallet, noEventSend)
 	
 	if not objectFound then
 
-		--print("Couldn't find pallet with id: " .. tostring(pallet.id) .. "/" .. tostring(pallet.lastServerId))
+		print("Couldn't find pallet with id: " .. tostring(pallet.id) .. "/" .. tostring(pallet.lastServerId))
 		return
 		
 		-- print("FULL SERVER TABLE:")
-		-- DebugUtil.printTableRecursively(g_server, " ", 0, 1);
+		-- DebugUtil.printTableRecursively(g_server.objects, " ", 0, 1);
 		
 		-- if g_server ~= nil then
 			-- if g_server.objects[pallet.id] ~= nil then
@@ -590,30 +593,6 @@ function BulkFill:FillUnitActionEventUnload(actionName, inputValue, callbackStat
 	end
 end
 FillUnit.actionEventUnload = Utils.prependedFunction(FillUnit.actionEventUnload, BulkFill.FillUnitActionEventUnload)
-
--- BULK FILL FUNCTIONS
-function BulkFill:loadMap(name)
-	--print("Load Mod: 'BULK FILL'")
-	BulkFill.initialised = false
-end
-
-function BulkFill:deleteMap()
-end
-
-function BulkFill:mouseEvent(posX, posY, isDown, isUp, button)
-end
-
-function BulkFill:keyEvent(unicode, sym, modifier, isDown)
-end
-
-function BulkFill:draw()
-end
-
-function BulkFill:update(dt)
-	if not BulkFill.initialised then
-		BulkFill.initialised = true
-	end
-end
 
 -- ADD custom strings from ModDesc.xml to g_i18n
 local i = 0
