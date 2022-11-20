@@ -105,9 +105,10 @@ function BulkFill:onLoad(savegame)
 end
 function BulkFill:saveToXMLFile(xmlFile, key, usedModNames)
 	if self.spec_bulkFill.isValid then
-		--local schema = Vehicle.xmlSchema
-		xmlFile:setValue(key .."#isEnabled", self.spec_bulkFill.isEnabled)
-		xmlFile:setValue(key .."#isSelectEnabled", self.spec_bulkFill.isSelectEnabled)
+		-- HACK (FOR NOW) - need to find out if this can be avoided..
+		local correctedKey = key:gsub(BulkFill.modName..".", "")
+		xmlFile:setValue(correctedKey .."#isEnabled", self.spec_bulkFill.isEnabled)
+		xmlFile:setValue(correctedKey .."#isSelectEnabled", self.spec_bulkFill.isSelectEnabled)
 	end
 end
 
