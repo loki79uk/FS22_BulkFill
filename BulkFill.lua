@@ -455,7 +455,7 @@ function BulkFill.FillActivatableRun(self, superFunc)
 	local bf = self.vehicle.spec_bulkFill
 	local spec = self.vehicle.spec_fillUnit
 	
-	if bf~=nil and bf.isValid then
+	if bf~=nil and bf.orderedTriggers~=nil and bf.isValid then
 
 		local sourceObject = bf.orderedTriggers[bf.selectedIndex].sourceObject
 		if sourceObject ~= nil then
