@@ -529,9 +529,9 @@ function BulkFill:startFilling(pallet, noEventSend)
 			local sourceObject = trigger.sourceObject
 			if sourceObject.id == pallet.id then
 				objectFound = true
-				print("index:" .. tostring(index) .. "  id:" .. tostring(sourceObject.id).. "/" .. tostring(sourceObject.lastServerId))
+				--print("index:" .. tostring(index) .. "  id:" .. tostring(sourceObject.id).. "/" .. tostring(sourceObject.lastServerId))
 				if index~=1 then
-					print("REORDERING TRIGGERS: "..tostring(index))
+					--print("REORDERING TRIGGERS: "..tostring(index))
 					table.insert(spec.fillTrigger.triggers, 1, trigger)
 					table.remove(spec.fillTrigger.triggers, index+1)
 					spec.fillTrigger.currentTrigger = spec.fillTrigger.triggers[1]
