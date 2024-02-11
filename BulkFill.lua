@@ -298,10 +298,12 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 								-- print("DELETED: "..tostring(spec.fillTrigger.currentTrigger.sourceObject.id))
 
 								if bf.isEnabled then
-									local nextFillType = bf.orderedTriggers[bf.selectedIndex].sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
-									local previousFillType = spec.fillTrigger.currentTrigger.sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
+									local sourceObject = bf.orderedTriggers[bf.selectedIndex].sourceObject
+									local triggerObject = spec.fillTrigger.currentTrigger.sourceObject
+									local nextFillType = sourceObject.spec_fillUnit.fillUnits[1].lastValidFillType
+									local previousFillType = triggerObject.spec_fillUnit.fillUnits[1].lastValidFillType
 									if nextFillType == previousFillType then
-										-- print("FILL FROM NEXT: "..tostring(bf.orderedTriggers[bf.selectedIndex].sourceObject.id))
+										-- print("FILL FROM NEXT: "..tostring(sourceObject.id))
 										if #spec.fillUnits==1 then
 											local sourceObject = bf.orderedTriggers[bf.selectedIndex].sourceObject
 											bf.canFillFrom[sourceObject.id] = true
@@ -311,7 +313,6 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 										if #bf.orderedTriggers > 0 then
 											-- print("FILL TYPES ARE DIFFERENT")
 											if #spec.fillUnits==1 then
-												local sourceObject = bf.orderedTriggers[bf.selectedIndex].sourceObject
 												bf.canFillFrom[sourceObject.id] = nil
 											end
 											self:cycleFillTriggers('FW')
@@ -454,8 +455,7 @@ function BulkFill.FillActivatableRun(self, superFunc)
 	local bf = self.vehicle.spec_bulkFill
 	local spec = self.vehicle.spec_fillUnit
 	
-	if bf~=nil and bf.orderedTriggers~=nil and bf.isValid then
-
+	if bf~=nil and bf.isValid and bf.orderedTriggers and bf.orderedTriggers[bf.selectedIndex] then
 		local sourceObject = bf.orderedTriggers[bf.selectedIndex].sourceObject
 		if sourceObject ~= nil then
 			if bf.canFillFrom[sourceObject.id] == false then
