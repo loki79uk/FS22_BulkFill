@@ -13,11 +13,12 @@ source(g_currentModDirectory.."StartFillingEvent.lua")
 BulkFill.ACTIVE      = { 0.1, 1.0, 0.1, 1.0 } --green
 BulkFill.INACTIVE    = { 1.0, 1.0, 0.1, 0.9 } --yellow
 BulkFill.UNSUPPORTED = { 1.0, 0.1, 0.1, 0.9 } --red
-BulkFill.UNSELECTED  = { 0.1, 0.1, 0.1, 0.3 } --grey
+BulkFill.UNSELECTED  = { 1.0, 1.0, 1.0, 0.5 } --grey
 
 BulkFill.ACTIVE_CB      = { 0.1, 0.5, 1.0, 1.0 }
 BulkFill.INACTIVE_CB    = { 1.0, 0.9, 0.0, 0.9 }
 BulkFill.UNSUPPORTED_CB = { 1.0, 0.5, 0.5, 0.9 }
+BulkFill.UNSELECTED_CB  = { 1.0, 1.0, 1.0, 0.3 }
 
 function BulkFill.prerequisitesPresent(specializations)
 	return  SpecializationUtil.hasSpecialization(FillUnit, specializations) and
@@ -347,10 +348,8 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 							local node = BulkFill.getObjectNode(sourceObject)
 							if node ~= nil then
 								local colour = {}
+								local useCBM = g_gameSettings:getValue(GameSettings.SETTING.USE_COLORBLIND_MODE) or false
 								if index==bf.selectedIndex then
-								
-									local useCBM = g_gameSettings:getValue(GameSettings.SETTING.USE_COLORBLIND_MODE) or false
-									
 									if bf.canFillFrom[sourceObject.id] == nil then
 										colour = useCBM and BulkFill.INACTIVE_CB or BulkFill.INACTIVE
 									else
@@ -361,7 +360,7 @@ function BulkFill:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection
 										end
 									end
 								else
-									colour = BulkFill.UNSELECTED
+									colour = useCBM and BulkFill.UNSELECTED_CB or BulkFill.UNSELECTED
 								end
 
 								local fillLevel = string.format("%.0f", sourceObject:getFillUnitFillLevel(1))
